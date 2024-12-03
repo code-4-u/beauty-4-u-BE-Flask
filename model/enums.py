@@ -20,6 +20,6 @@ class CustomerGrade(Enum):
 
 
 class OrderState(Enum):
-    ORDERED = "구매"
-    REFUND = "환불"
-    TAKE_BACK = "반품"
+    PURCHASED = "구매"
+    REFUNDED = "환불"
+    CANCELLED = "취소"
