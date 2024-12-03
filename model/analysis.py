@@ -1,13 +1,11 @@
 # analysis.py
 
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Enum as SqlAlchemyEnum
 from datetime import datetime  # datetime 모듈 임포트
-from model.db import database  # db 객체를 가져옵니다.
+from model.db import db  # db 객체를 가져옵니다.
 
 from model.enums import AnalysisKind, CustomerGender, CustomerGrade, OrderState
 
-db = SQLAlchemy()  # SQLAlchemy 객체를 생성
 
 # 분석 entity
 class Analysis(db.Model):
@@ -44,7 +42,7 @@ class OrderInfo(db.Model):
     goods_code = db.Column(db.String(20), nullable=False)
     order_count = db.Column(db.Integer, nullable=False)
     order_price = db.Column(db.Integer, nullable=False)
-    order_state = db.Column(SqlAlchemyEnum(OrderState), nullable=False)
+    order_status = db.Column(SqlAlchemyEnum(OrderState), nullable=False)
     order_created_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)  # 기본값 설정
 
 # 상품 entity
