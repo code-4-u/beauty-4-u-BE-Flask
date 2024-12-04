@@ -2,14 +2,12 @@ from enum import Enum
 
 
 class AnalysisKind(Enum):
-    TYPE_APRIORI = "APRIORI"
-    TYPE_COLLABORATIVE = "COLLABORATIVE"
-
+    ASSOCIATION = "ASSOCIATION"
+    PERSONALIZED = "PERSONALIZED"
 
 class CustomerGender(Enum):
     MALE = "MALE"
     FEMALE = "FEMALE"
-
 
 class CustomerGrade(Enum):
     BABY = "BABY"
@@ -18,8 +16,7 @@ class CustomerGrade(Enum):
     BLACK = "BLACK"
     GOLD = "GOLD"
 
-
 class OrderState(Enum):
-    PURCHASED = "구매"
-    REFUNDED = "환불"
-    CANCELLED = "취소"
+    PURCHASED = "PURCHASED"
+    REFUNDED = "REFUNDED"
+    CANCELLED = "CANCELLED"
