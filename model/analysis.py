@@ -71,7 +71,6 @@ class AssociationRecommendation(db.Model):
     lift = db.Column(db.Integer, nullable=False)
     last_noti_sent_date = db.Column(db.DateTime, nullable=True)
 
-
 class TopCategory(db.Model):
     __tablename__ = 'top_category'
 
@@ -85,3 +84,23 @@ class SubCategory(db.Model):
     sub_category_code = db.Column(db.String(20), primary_key=True)
     top_category_code = db.Column(db.String(20), db.ForeignKey('top_category.top_category_code'), nullable=False)
     sub_category_name = db.Column(db.String(50), nullable=False)
+
+class Review(db.Model):
+    __tablename__ = 'review'
+
+    review_id = db.Column(db.Integer, primary_key=True)
+    customer_code = db.Column(db.String(20), db.ForeignKey('customer.customer_code'), nullable=False)
+    goods_code = db.Column(db.String(20), db.ForeignKey('goods.goods_code'), nullable=False)
+    review_score = db.Column(db.Integer, nullable=False)
+    review_content = db.Column(db.Text, nullable=False)
+    review_created_date = db.Column(db.DateTime, nullable=False)
+
+    # personalized_recommendation 엔티티
+class PersonalizedRecommendation(db.Model):
+    __tablename__ = 'personalized_recommendation'
+    personalized_recommendation_id = db.Column(db.Integer, primary_key=True)
+    customer_code = db.Column(db.String(20), db.ForeignKey('customer.customer_code'), nullable=False)
+    goods_code = db.Column(db.String(20), db.ForeignKey('goods.goods_code'),nullable=False)
+    analysis_id = db.Column(db.Integer, nullable=False)
+    recommendation_score = db.Column(db.Integer, nullable=False)
+    last_noti_sent_date = db.Column(db.DateTime, nullable=True)
