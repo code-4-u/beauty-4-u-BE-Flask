@@ -29,8 +29,8 @@ class Customer(db.Model):
     customer_gender = db.Column(SqlAlchemyEnum(CustomerGender), nullable=False)
     customer_skintype = db.Column(db.String(20), nullable=False)
     customer_grade = db.Column(SqlAlchemyEnum(CustomerGrade), nullable=False)
-    customer_created_date = db.Column(db.DateTime, nullable=True)
-    customer_updated_date = db.Column(db.DateTime, nullable=True)
+    created_date = db.Column(db.DateTime, nullable=True)
+    updated_date = db.Column(db.DateTime, nullable=True)
     privacy_consent_yn = db.Column(db.String(1), nullable=False)
 
 # 주문 entity
@@ -43,7 +43,7 @@ class OrderInfo(db.Model):
     order_count = db.Column(db.Integer, nullable=False)
     order_price = db.Column(db.Integer, nullable=False)
     order_status = db.Column(SqlAlchemyEnum(OrderState), nullable=False)
-    order_created_date = db.Column(db.DateTime, nullable=False)
+    created_date = db.Column(db.DateTime, nullable=False)
 
 # 상품 entity
 class Goods(db.Model):
