@@ -34,7 +34,7 @@ class CollaboFilterService:
         return model
 
     # 추천 생성 함수
-    def get_recommendations(model, customer_code, customer_age, customer_skintype, goods_ids, review_scores, buyandreviewData, n_recommendations=5):
+    def get_recommendations(model, customer_code, customer_age, customer_skintype, goods_ids, review_scores, buyandreviewData, n_recommendations=3):
         product_predictions = defaultdict(list)
         # 각 제품에 대해 예상 평점 계산
         # 평점 총 0 ~ 5점, 그외 가중치 총합 1점 총 6점으로 평가 (해당하지 않을 경우 가산점 부여를 안함.)
@@ -266,10 +266,51 @@ class CollaboFilterService:
                 'recommendations' : recommendations
             })
 
-        print(pd.DataFrame(all_recommends))
-        
-
-
-        #구버전 recommendations = self.get_recommendations('C0213', goods_ids, review_scores, buyandreviewData)
         # 고객 개인별 Id, 나이, 피부타입, 등급, 상품 목록, 리뷰 점수, 리뷰데이터에 대한 통계 데이터
         return all_recommends
+    
+    def create_analysis(self, analysis_kind, analysis_title, analysis_description):
+        try:
+            new_analysis = Analysis(
+                analysis_kind = analysis_kind,
+                analysis_title = analysis_title,
+                analysis_description = analysis_description,
+                analysis_created_date = func.now()
+            )
+
+            db.session.add(new_analysis)
+            db.session.commit()
+
+            return new_analysis.analysis_id  # 생성된 분석 ID 반환
+        except Exception as e:
+            print(f"An error occurred while creating analysis: {e}")
+        return None
+    
+    def delete_analysis(self, analysis_id):
+        try:
+            analysis = Analysis.query.get(analysis_id)
+            if analysis:
+                db.session.delete(analysis)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            print(f"An error occurred while creating analysis: {e}")
+            return False
+        
+    def save_recommendation(self, all_recommends, analysis_id): 
+        personalized_recommendations = []
+        # 리스트의 각 요소(딕셔너리)에 접근
+        for recommendation in all_recommends:
+            customer_code = recommendation['customer_code']
+            goods_code, score = recommendation['recommendations'][0]
+            personalized = PersonalizedRecommendation(
+                customer_code = customer_code,
+                goods_code = goods_code,
+                analysis_id = analysis_id,
+                recommendation_score = score
+            )
+            personalized_recommendations.append(personalized)
+        
+        db.session.bulk_save_objects(personalized_recommendations)
+        db.session.commit()
