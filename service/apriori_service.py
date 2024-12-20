@@ -115,8 +115,8 @@ class RecommendationService:
                                 confidence = combination_rule['confidence'].values[0]
 
                                 # 향상도 계산
-                                support_B = rules[rules['consequents'].apply(lambda x: item in x)]['support'].values[0]
-                                lift = confidence / support_B if support_B > 0 else 0
+                                support_b = rules[rules['consequents'].apply(lambda x: item in x)]['support'].values[0]
+                                lift = confidence / support_b if support_b > 0 else 0
 
                                 # DB에 조합 추천 저장
                                 recommendation = AssociationRecommendation(
