@@ -11,11 +11,11 @@ from model.enums import AnalysisKind, CustomerGender, CustomerGrade, OrderState
 class Analysis(db.Model):
     __tablename__ = 'analysis'
 
-    analysis_id = db.Column(db.Integer, primary_key=True)
+    analysis_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     analysis_kind = db.Column(SqlAlchemyEnum(AnalysisKind), nullable=False)
     analysis_title = db.Column(db.String(128))
     analysis_description = db.Column(db.String(256))
-    analysis_created_date = db.Column(db.DateTime, default=datetime.utcnow)  # 기본값 설정
+    created_date = db.Column(db.DateTime, default=datetime.utcnow)  # 기본값 설정
 
 # 고객 entity
 class Customer(db.Model):
@@ -55,7 +55,7 @@ class Goods(db.Model):
     goods_name = db.Column(db.String(50), nullable=False)
     goods_price = db.Column(db.Integer, nullable=False)
     goods_skintype = db.Column(db.String(20), nullable=False)
-    goods_created_date = db.Column(db.DateTime, nullable=False)
+    created_date = db.Column(db.DateTime, nullable=False)
 
 # association_recommendation 엔티티
 class AssociationRecommendation(db.Model):
@@ -93,14 +93,14 @@ class Review(db.Model):
     goods_code = db.Column(db.String(20), db.ForeignKey('goods.goods_code'), nullable=False)
     review_score = db.Column(db.Integer, nullable=False)
     review_content = db.Column(db.Text, nullable=False)
-    review_created_date = db.Column(db.DateTime, nullable=False)
+    created_date = db.Column(db.DateTime, nullable=False)
 
     # personalized_recommendation 엔티티
 class PersonalizedRecommendation(db.Model):
     __tablename__ = 'personalized_recommendation'
-    personalized_recommendation_id = db.Column(db.Integer, primary_key=True)
+    personalized_recommendation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # autoincrement 추가
     customer_code = db.Column(db.String(20), db.ForeignKey('customer.customer_code'), nullable=False)
     goods_code = db.Column(db.String(20), db.ForeignKey('goods.goods_code'),nullable=False)
-    analysis_id = db.Column(db.Integer, nullable=False)
-    recommendation_score = db.Column(db.Integer, nullable=False)
+    analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.analysis_id'), nullable=False)
+    recommendation_score = db.Column(db.Float, nullable=False)
     last_noti_sent_date = db.Column(db.DateTime, nullable=True)
