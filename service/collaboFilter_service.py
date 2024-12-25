@@ -232,6 +232,7 @@ class CollaboFilterService:
     def runningRecommend(self):
         # 리뷰 데이터 조회
         reviews = self.load_review_data()
+        print(f"review:",reviews);
 
         # 고객 데이터 조회
         customers = self.load_customer_data()
@@ -275,7 +276,7 @@ class CollaboFilterService:
                 analysis_kind = analysis_kind,
                 analysis_title = analysis_title,
                 analysis_description = analysis_description,
-                analysis_created_date = func.now()
+                created_date = func.now()
             )
 
             db.session.add(new_analysis)

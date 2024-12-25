@@ -7,7 +7,13 @@ import controller.apriori_controller
 import controller.collaboFilter_controller
 from model.db import init_app
 
-load_dotenv()
+from dotenv import load_dotenv
+import os
+
+# .env 파일 절대 경로로 지정
+from pathlib import Path
+env_path = Path('.') / '.env'
+load_dotenv(dotenv_path=env_path, override=True)
 
 # Flask 애플리케이션 초기화
 app = Flask(__name__)
