@@ -2,28 +2,26 @@ import pandas as pd
 from flask import current_app
 from mlxtend.frequent_patterns import apriori, association_rules
 
-from model.analysis import Customer  # Customer 모델 가져오기
-from model.analysis import OrderInfo, AssociationRecommendation, Analysis, Goods, SubCategory, TopCategory  # 모델 가져오기
-from model.db import db  # SQLAlchemy 객체 가져오기
+from model.analysis import OrderInfo, AssociationRecommendation, Analysis, Goods, SubCategory, TopCategory
+from model.db import db
 
 
 class RecommendationService:
     def __init__(self):
-        self.db = db  # SQLAlchemy 객체
+        self.db = db
 
     def create_analysis(self, analysis_kind, analysis_title, analysis_description):
         with current_app.app_context():
             try:
-                # 1. 새로운 분석 생성
                 new_analysis = Analysis(
-                    analysis_kind=analysis_kind,  # 분석 종류
-                    analysis_title=analysis_title,  # 제목
-                    analysis_description=analysis_description  # 설명
+                    analysis_kind=analysis_kind,
+                    analysis_title=analysis_title,
+                    analysis_description=analysis_description
                 )
                 db.session.add(new_analysis)
                 db.session.commit()
 
-                return new_analysis.analysis_id  # 생성된 분석 ID 반환
+                return new_analysis.analysis_id
 
             except Exception as e:
                 print(f"An error occurred while creating analysis: {e}")
@@ -51,7 +49,17 @@ class RecommendationService:
                 return top_category.top_category_code if top_category else None
         return None
 
-    def recommend_all_combinations(self, target_goods_code_a, customer_code, analysis_kind, analysis_title, analysis_description):
+    def get_top_category_by_goods_code(self, goods_code):
+        with current_app.app_context():
+            goods = Goods.query.filter_by(goods_code=goods_code).first()
+            if goods:
+                sub_category = SubCategory.query.filter_by(sub_category_code=goods.sub_category_code).first()
+                if sub_category:
+                    top_category = TopCategory.query.filter_by(top_category_code=sub_category.top_category_code).first()
+                    return top_category.top_category_code if top_category else None
+            return None
+
+    def recommend_all_combinations(self, target_goods_code_a, analysis_kind, analysis_title, analysis_description):
         with current_app.app_context():
             analysis_id = None
             try:
@@ -60,87 +68,148 @@ class RecommendationService:
                 if analysis_id is None:
                     return {"message": "Failed to create analysis."}
 
-                # 2. 주문 데이터 가져오기
-                orders = OrderInfo.query.filter(OrderInfo.order_status == 'PURCHASED').all()
+                # 2. 타겟 상품의 카테고리 정보 가져오기
+                target_goods = Goods.query.filter_by(goods_code=target_goods_code_a).first()
+                if not target_goods:
+                    return {"message": "Target goods not found"}
+
+                target_sub_category = SubCategory.query.filter_by(
+                    sub_category_code=target_goods.sub_category_code).first()
+                if not target_sub_category:
+                    return {"message": "Target subcategory not found"}
+
+                target_top_category = TopCategory.query.filter_by(
+                    top_category_code=target_sub_category.top_category_code).first()
+                if not target_top_category:
+                    return {"message": "Target top category not found"}
+
+                print(f"Target goods top category: {target_top_category.top_category_code}")
+                print(f"Target goods sub category: {target_sub_category.sub_category_code}")
+
+                # 3. 같은 상위 카테고리, 다른 하위 카테고리의 상품 코드들 가져오기
+                same_category_goods = []
+                all_goods = Goods.query.join(SubCategory, Goods.sub_category_code == SubCategory.sub_category_code) \
+                    .filter(SubCategory.top_category_code == target_top_category.top_category_code) \
+                    .filter(Goods.sub_category_code != target_goods.sub_category_code) \
+                    .all()
+
+                for goods in all_goods:
+                    if goods.goods_code != target_goods_code_a:
+                        same_category_goods.append(goods.goods_code)
+
+                if not same_category_goods:
+                    return {"message": "No other products found in the same top category with different subcategories"}
+
+                print(f"Found {len(same_category_goods)} products in same top category but different subcategories")
+
+                # 4. 고객별 구매 데이터 가져오기
+                orders = OrderInfo.query.filter(
+                    OrderInfo.order_status == 'PURCHASED',
+                    OrderInfo.goods_code.in_([target_goods_code_a] + same_category_goods)
+                ).all()
 
                 if not orders:
-                    return {}  # 데이터가 없을 경우 빈 결과 반환
+                    return {"message": "No orders found for the relevant products"}
 
-                # 3. 데이터 전처리
-                data = []
+                # 5. 고객별 구매 상품 집합 생성
+                customer_sets = {}
                 for order in orders:
                     if order.order_count > 0:
-                        customer = db.session.get(Customer, order.customer_code)  # 고객 정보 가져오기
-                        data.append({
-                            'customer_code': order.customer_code,
-                            'goods_code': order.goods_code,
-                            'order_count': order.order_count,
-                            'skin_type': customer.customer_skintype  # 고객의 피부 타입 추가
-                        })
+                        if order.customer_code not in customer_sets:
+                            customer_sets[order.customer_code] = set()
+                        customer_sets[order.customer_code].add(order.goods_code)
 
-                df = pd.DataFrame(data)
+                total_customers = len(customer_sets)
+                print(f"Processed {total_customers} customers who purchased relevant products")
 
-                # 고객-상품 이진 행렬 생성
-                basket = df.pivot_table(index='customer_code', columns='goods_code', values='order_count', fill_value=0)
-                basket_binary = (basket > 0).astype(int)
+                # 6. 타겟 상품의 구매 고객 수 계산
+                target_customers = sum(1 for goods_set in customer_sets.values()
+                                       if target_goods_code_a in goods_set)
 
-                # Apriori 알고리즘 적용
-                frequent_itemsets = apriori(basket_binary, min_support=0.015, use_colnames=True)
+                if target_customers == 0:
+                    return {"message": "Target item has no customers"}
 
-                # num_itemsets 계산
-                num_itemsets = frequent_itemsets.shape[0]
+                print(f"Target item purchased by {target_customers} customers")
 
-                # 연관 규칙 생성
-                rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.5, num_itemsets=num_itemsets)
+                # 7. 연관성 분석
+                potential_recommendations = []
+                min_customer_count = 1  # 최소 1명 이상의 고객이 구매
 
-                # 타겟 상품의 top_category 가져오기
-                target_top_category = self.get_top_category_by_goods_code(target_goods_code_a)
+                for item in same_category_goods:
+                    try:
+                        # 두 상품을 모두 구매한 고객 수 계산
+                        co_occurrence = sum(1 for goods_set in customer_sets.values()
+                                            if target_goods_code_a in goods_set and item in goods_set)
 
-                # 상품 A와 모든 다른 상품 간의 조합 점수 계산
+                        if co_occurrence >= min_customer_count:
+                            # 각 상품의 구매 고객 수 계산
+                            item_customers = sum(1 for goods_set in customer_sets.values()
+                                                 if item in goods_set)
+
+                            if item_customers > 0:
+                                # 지표 계산
+                                support = co_occurrence / total_customers
+                                confidence = co_occurrence / target_customers
+                                lift = (co_occurrence * total_customers) / (target_customers * item_customers)
+
+                                # 연관성이 있는 경우만 포함
+                                if lift > 0.2:  # lift가 1보다 크면 양의 연관성이 있음
+                                    potential_recommendations.append({
+                                        'item': item,
+                                        'support': support,
+                                        'confidence': confidence,
+                                        'lift': lift,
+                                        'co_occurrence': co_occurrence
+                                    })
+                                    print(f"Found potential association with item {item}: "
+                                          f"support={support:.4f}, confidence={confidence:.4f}, "
+                                          f"lift={lift:.4f}, co_purchase_customers={co_occurrence}")
+
+                    except Exception as e:
+                        print(f"Error processing item {item}: {str(e)}")
+                        continue
+
+                if not potential_recommendations:
+                    return {
+                        "message": f"No associations found for target item (purchased by {target_customers} customers)"}
+
+                # 8. 점수화 및 정렬
                 recommendations = []
-                for item in basket.columns:
-                    if item != target_goods_code_a:  # 상품 A와 다른 상품만 비교
-                        # 현재 상품의 top_category 가져오기
-                        item_top_category = self.get_top_category_by_goods_code(item)
+                sorted_recommendations = sorted(
+                    potential_recommendations,
+                    key=lambda x: (x['lift'], x['confidence'], x['support']),
+                    reverse=True
+                )
 
-                        # 두 상품의 top_category가 같고, sub_category가 다른 경우
-                        if item_top_category == target_top_category:
-                            combination_rule = rules[
-                                (rules['antecedents'].apply(lambda x: target_goods_code_a in x)) &
-                                (rules['consequents'].apply(lambda x: item in x))
-                            ]
+                # 모든 유효한 추천 저장
+                for rec in sorted_recommendations:
+                    recommendation = AssociationRecommendation(
+                        goods_code=target_goods_code_a,
+                        associated_goods_code=rec['item'],
+                        analysis_id=analysis_id,
+                        support=float(rec['support']),
+                        confidence=float(rec['confidence']),
+                        lift=float(rec['lift'])
+                    )
+                    recommendations.append(recommendation)
 
-                            if not combination_rule.empty:
-                                support = combination_rule['support'].values[0]
-                                confidence = combination_rule['confidence'].values[0]
+                print(f"Generated {len(recommendations)} recommendations")
 
-                                # 향상도 계산
-                                support_b = rules[rules['consequents'].apply(lambda x: item in x)]['support'].values[0]
-                                lift = confidence / support_b if support_b > 0 else 0
-
-                                # DB에 조합 추천 저장
-                                recommendation = AssociationRecommendation(
-                                    goods_code=target_goods_code_a,
-                                    associated_goods_code=item,
-                                    customer_code=customer_code,
-                                    analysis_id=analysis_id,
-                                    support=support,
-                                    confidence=confidence,
-                                    lift=lift  # 향상도 추가
-                                )
-                                recommendations.append(recommendation)
-
-                # DB에 모든 추천 저장
-                if recommendations:
+                try:
                     db.session.add_all(recommendations)
                     db.session.commit()
-
-                return {"message": "Recommendations calculated and saved.", "recommendations_count": len(recommendations)}
+                    return {
+                        "message": "Recommendations calculated and saved.",
+                        "recommendations_count": len(recommendations),
+                        "analysis_id": analysis_id
+                    }
+                except Exception as e:
+                    print(f"Error saving recommendations: {str(e)}")
+                    db.session.rollback()
+                    raise
 
             except Exception as e:
-                print(f"An error occurred: {e}")
-                # 분석 삭제
+                print(f"An error occurred: {str(e)}")
                 if analysis_id:
                     self.delete_analysis(analysis_id)
-                return {"message": "An error occurred during analysis, and the created analysis has been deleted."}
-
+                return {"message": f"An error occurred during analysis: {str(e)}"}
