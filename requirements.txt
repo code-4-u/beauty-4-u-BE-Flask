@@ -13,7 +13,6 @@ kiwisolver==1.4.7
 MarkupSafe==3.0.2
 matplotlib==3.9.3
 mlxtend==0.23.3
-mysqlclient==2.2.6
 numpy==1.24.3
 packaging==24.2
 pandas==2.2.3
@@ -25,8 +24,8 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.2
 scikit-learn==1.5.2
+scikit-surprise==1.1.4
 scipy==1.14.1
-setuptools==75.6.0
 six==1.16.0
 SQLAlchemy==2.0.36
 threadpoolctl==3.5.0
