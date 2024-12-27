@@ -17,13 +17,16 @@ def recommendCollabo():
     return jsonify(results), 200
 
 # 개인별 추천하기 
-@review_blueprint.route('/collaboFilter')
+@review_blueprint.route('/collaboFilter', methods=['POST'])
 def run_collaboFilter():
     service = CollaboFilterService()
     recommend = service.runningRecommend()
     analysis_id = service.create_analysis("PERSONALIZED", "전 고객 개별 협업 필터링 추천 분석", "설명")
     service.save_recommendation(recommend, analysis_id)
-    return "동작완료"
+    return jsonify({
+        "status" : analysis_id is not None,
+        "analysisId" : analysis_id
+    })
 
 @review_blueprint.route('/collaboTest')
 def testing():
