@@ -64,7 +64,6 @@ class AssociationRecommendation(db.Model):
     association_recommendation_id = db.Column(db.Integer, primary_key=True)
     goods_code = db.Column(db.String(20), db.ForeignKey('goods.goods_code'), nullable=False)
     associated_goods_code = db.Column(db.String(20), db.ForeignKey('goods.goods_code'), nullable=False)
-    customer_code = db.Column(db.String(20), db.ForeignKey('customer.customer_code'), nullable=False)
     analysis_id = db.Column(db.Integer, db.ForeignKey('analysis.analysis_id'), nullable=False)
     support = db.Column(db.Integer, nullable=False)
     confidence = db.Column(db.Integer, nullable=False)
