@@ -224,7 +224,7 @@ class CollaboFilterService:
     def load_review_data(self):
         try:
             # Review 테이블에서 최신순으로 1만개만 조회하는 서브쿼리 생성
-            latest_reviews = self.db.session.query(Review).order_by(Review.created_date.desc()).limit(10000).subquery()
+            latest_reviews = self.db.session.query(Review).order_by(Review.created_date.desc()).limit(2000).subquery()
 
             data = self.db.session.query(
                 Customer.customer_code,
