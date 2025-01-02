@@ -147,6 +147,42 @@ class CollaboFilterService:
                 ).label('other_grade_count'),
                 func.count(
                     case(
+                    (Customer.customer_age.between(10, 19), 1),
+                    else_=None
+                    )
+                ).label('age_10s_count'),
+                func.count(
+                    case(
+                    (Customer.customer_age.between(20, 29), 1),
+                    else_=None
+                    )
+                ).label('age_20s_count'),
+                func.count(
+                    case(
+                    (Customer.customer_age.between(30, 39), 1),
+                    else_=None
+                    )
+                ).label('age_30s_count'),
+                func.count(
+                    case(
+                    (Customer.customer_age.between(40, 49), 1),
+                    else_=None
+                    )
+                ).label('age_40s_count'),
+                func.count(
+                    case(
+                    (Customer.customer_age.between(50, 59), 1),
+                    else_=None
+                    )
+                ).label('age_50s_count'),
+                func.count(
+                    case(
+                    (Customer.customer_age >= 60, 1),
+                    else_=None
+                    )
+                ).label('age_60s_plus_count'),
+                func.count(
+                    case(
                         (Customer.customer_age < 40, 1),
                         else_=None
                     )
@@ -169,7 +205,13 @@ class CollaboFilterService:
             process = pd.DataFrame(list(data), columns=['goods_code',
                                                         'goods_skintype',
                                                         'high_grade_count',
-                                                        'other_grade_count', 
+                                                        'other_grade_count',
+                                                        'age_10s_count',
+                                                        'age_20s_count',
+                                                        'age_30s_count',
+                                                        'age_40s_count',
+                                                        'age_50s_count',
+                                                        'age_60s_plus_count',
                                                         'young_count', 
                                                         'old_count', 
                                                         'total'])
@@ -181,20 +223,23 @@ class CollaboFilterService:
     # DB - 리뷰데이터 조회
     def load_review_data(self):
         try:
+            # Review 테이블에서 최신순으로 1만개만 조회하는 서브쿼리 생성
+            latest_reviews = self.db.session.query(Review).order_by(Review.created_date.desc()).limit(2000).subquery()
+
             data = self.db.session.query(
                 Customer.customer_code,
                 Customer.customer_age,
                 Customer.customer_grade,
-                Review.goods_code,
+                latest_reviews.c.goods_code,
                 Goods.goods_name,
                 Goods.goods_skintype,
-                Review.review_score
+                latest_reviews.c.review_score
             ).join(
-                Review,
-                Goods.goods_code == Review.goods_code
+                latest_reviews,
+                Goods.goods_code == latest_reviews.c.goods_code
             ).join(
                 Customer,
-                Review.customer_code == Customer.customer_code
+                latest_reviews.c.customer_code == Customer.customer_code
             )
 
             process = pd.DataFrame(list(data), columns=['customer_code',
@@ -204,6 +249,11 @@ class CollaboFilterService:
                                                         'goods_name', 
                                                         'goods_skintype',
                                                         'review_score'])
+            
+            # 데이터 확인 로그
+            print("\n=== 데이터 로딩 결과 ===")
+            print(f"총 로드된 리뷰 수: {len(process)}")
+
             result = process.to_dict('records')
             return result
         except Exception as e:
@@ -232,7 +282,6 @@ class CollaboFilterService:
     def runningRecommend(self):
         # 리뷰 데이터 조회
         reviews = self.load_review_data()
-        print(f"review:",reviews);
 
         # 고객 데이터 조회
         customers = self.load_customer_data()
