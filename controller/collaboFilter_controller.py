@@ -1,3 +1,4 @@
+from time import time
 from flask import Blueprint, jsonify, request
 from service.collaboFilter_service import CollaboFilterService
 from evaluation.HybridRecommenderEvaluator import HybridRecommenderEvaluator
@@ -19,10 +20,39 @@ def recommendCollabo():
 # 개인별 추천하기 
 @review_blueprint.route('/collaboFilter', methods=['POST'])
 def run_collaboFilter():
+    total_start_time = time()
     service = CollaboFilterService()
+
+    print("=====================")
+    print("협업 필터링 추천 프로세스 시작")
+
+    # 추천 실행
+    recommend_start_time = time()
+    print("추천 알고리즘 실행 시작")
     recommend = service.runningRecommend()
+    recommend_time = time() - recommend_start_time
+    print(f"추천 알고리즘 실행 완료: {recommend_time:.2f}초 소요")
+
+    # 분석 생성
+    analysis_start_time = time()
+    print("분석 정보 생성 시작")
     analysis_id = service.create_analysis("PERSONALIZED", "전 고객 개별 협업 필터링 추천 분석", "설명")
+    analysis_time = time() - analysis_start_time
+    print(f"분석 정보 생성 완료: {analysis_time:.2f}초 소요")
+
+
+     # 추천 결과 저장
+    save_start_time = time()
+    print("추천 결과 저장 시작")
     service.save_recommendation(recommend, analysis_id)
+    save_time = time() - save_start_time
+    print(f"추천 결과 저장 완료: {save_time:.2f}초 소요")
+
+    # 전체 실행 시간 계산
+    total_time = time() - total_start_time
+    print(f"전체 프로세스 완료: 총 {total_time:.2f}초 소요")
+    print("=====================")
+
     return jsonify({
         "status" : analysis_id is not None,
         "analysisId" : analysis_id
